@@ -1931,6 +1931,11 @@
       callback(error == null ? request : null);
     } : callback;
   }
+  var d3_dsvEval = false;
+  try {
+    new Function("", "");
+    d3_dsvEval = true;
+  } catch (ignore) {}
   d3.dsv = function(delimiter, mimeType) {
     var reFormat = new RegExp('["' + delimiter + "\n]"), delimiterCode = delimiter.charCodeAt(0);
     function dsv(url, row, callback) {
@@ -1949,7 +1954,7 @@
         return dsv.parse(request.responseText, f);
       };
     }
-    dsv.parse = function(text, f) {
+    dsv.parse = d3_dsvEval ? function(text, f) {
       var o;
       return dsv.parseRows(text, function(row, i) {
         if (o) return o(row, i - 1);
@@ -1959,6 +1964,17 @@
         o = f ? function(row, i) {
           return f(a(row), i);
         } : a;
+      });
+    } : function(text, f) {
+      f = f || d3_identity;
+      var header;
+      return d3.csv.parseRows(text, function(row, i) {
+        if (i) {
+          var o = {}, j = -1, m = header.length;
+          while (++j < m) o[header[j]] = row[j];
+          return f(o, i - 1);
+        }
+        header = row;
       });
     };
     dsv.parseRows = function(text, f) {
